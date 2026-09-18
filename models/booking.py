@@ -48,7 +48,7 @@ class Booking(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
 
     name = fields.Char(required=True)
-    description = fields.Text()
+    additional_notes = fields.Text()
     resource_id = fields.Many2one(
         comodel_name="resource.resource",
         required=True,

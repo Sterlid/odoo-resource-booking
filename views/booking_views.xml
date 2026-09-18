@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- View Bookings-->
     <record id="booking_view_list" model="ir.ui.view">
-        <field name="name">Booking List</field>
+        <field name="name">booking.booking.list</field>
         <field name="model">booking.booking</field>
         <field name="arch" type="xml">
             <list string="Bookings">
-                <field name="name"/>
-                <field name="description"/>
-                <field name="resource_id"/>
+                <field name="name" />
+                <field name="resource_id" />
+                <field name="user_id" />
+                <field name="start_datetime" />
+                <field name="end_datetime" />
+                <field name="state" />
             </list>
         </field>
     </record>
-
     <record id="booking_view_form" model="ir.ui.view">
         <field name="name">booking.booking.form</field>
         <field name="model">booking.booking</field>
@@ -20,12 +21,12 @@
             <form string="Booking">
                 <sheet>
                     <group>
-                        <field name="booking_mode" invisible="1"/>
-                        <field name="name"/>
-                        <field name="resource_id"/>
-                        <field name="user_id"/>
-                        <field name="state"/>
-                        <field name="start_datetime"/>
+                        <field name="booking_mode" invisible="1" />
+                        <field name="name" />
+                        <field name="resource_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                        <field name="user_id" />
+                        <field name="state" />
+                        <field name="start_datetime" />
                         <field
                             name="duration_hours"
                             widget="float_time"
@@ -35,14 +36,14 @@
                             name="end_datetime"
                             readonly="booking_mode == 'room'"
                         />
-                        <field name="calendar_id" readonly="1"/>
-                        <field name="description"/>
+                        <field name="calendar_id" readonly="1" />
+                        <field name="additional_notes" />
                     </group>
                 </sheet>
-                <chatter/>
             </form>
         </field>
     </record>
+
 
     <record id="booking_booking_action" model="ir.actions.act_window">
         <field name="name">Bookings</field>

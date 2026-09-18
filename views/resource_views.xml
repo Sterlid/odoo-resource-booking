@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="booking_resource_form_inherit" model="ir.ui.view">
+        <field name="name">resource.resource.form.booking</field>
+        <field name="model">resource.resource</field>
+        <field
+            name="inherit_id"
+            ref="resource.resource_resource_form"
+        />
+        <field name="arch" type="xml">
+            <xpath
+                expr="//group[@name='resource_details']"
+                position="inside"
+            >
+                <field
+                    name="is_bookable"
+                    groups="booking.group_booking_admin"
+                />
+                <field
+                    name="booking_mode"
+                    invisible="not is_bookable"
+                    groups="booking.group_booking_admin"
+                />
+                <field
+                    name="max_advance_months"
+                    invisible="not is_bookable"
+                    groups="booking.group_booking_admin"
+                />
+                <field
+                    name="latest_start_hour"
+                    widget="float_time"
+                    invisible="not is_bookable"
+                    groups="booking.group_booking_admin"
+                />
+                <field
+                    name="latest_end_hour"
+                    widget="float_time"
+                    invisible="not is_bookable"
+                    groups="booking.group_booking_admin"
+                />
+            </xpath>
+        </field>
+    </record>
+
+    <record id="booking_resource_action" model="ir.actions.act_window">
+        <field name="name">Bookable Resources</field>
+        <field name="res_model">resource.resource</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">
+            [('resource_type', '=', 'material')]
+        </field>
+        <field name="context">
+            {
+                'default_resource_type': 'material',
+                'default_is_bookable': True
+            }
+        </field>
+    </record>
+</odoo>

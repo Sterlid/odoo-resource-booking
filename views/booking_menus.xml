@@ -4,4 +4,12 @@
         <menuitem id="booking_menu_bookings" name="Bookings" action="booking_booking_action">
         </menuitem>
     </menuitem>
+
+    <menuitem
+        id="booking_resource_menu"
+        name="Resources"
+        parent="booking_menu"
+        action="booking_resource_action"
+        groups="booking.group_booking_admin"
+    />
 </odoo>

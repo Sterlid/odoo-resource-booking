@@ -15,7 +15,8 @@ Resource booking system module for Odoo
         "security/security.xml",
         "security/ir.model.access.csv",
         "views/booking_views.xml",
-        "views/booking_menus.xml"
+        "views/resource_views.xml",
+        "views/booking_menus.xml",
     ],
     'demo': [],
     'installable': True,
