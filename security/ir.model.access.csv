@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_booking_booking_user,access.booking.booking.user,model_booking_booking,booking.group_booking_user,1,1,1,0
+access_booking_resource_user,access.resource.resource.user,resource.model_resource_resource,booking.group_booking_user,1,0,0,0
+access_booking_booking_admin,access.booking.booking.admin,model_booking_booking,booking.group_booking_admin,1,1,1,1
+access_booking_resource_admin,access.resource.resource.admin,resource.model_resource_resource,booking.group_booking_admin,1,1,1,1

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="group_booking_user" model="res.groups">
+        <field name="name">Booking User</field>
+    </record>
+    <record id="group_booking_admin" model="res.groups">
+        <field name="name">Booking Admin</field>
+    </record>
+</odoo>

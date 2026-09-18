@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- View Bookings-->
+    <record id="booking_view_list" model="ir.ui.view">
+        <field name="name">Booking List</field>
+        <field name="model">booking.booking</field>
+        <field name="arch" type="xml">
+            <list string="Bookings">
+                <field name="name"/>
+                <field name="description"/>
+                <field name="resource_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="booking_view_form" model="ir.ui.view">
+        <field name="name">booking.booking.form</field>
+        <field name="model">booking.booking</field>
+        <field name="arch" type="xml">
+            <form string="Booking">
+                <sheet>
+                    <group>
+                        <field name="booking_mode" invisible="1"/>
+                        <field name="name"/>
+                        <field name="resource_id"/>
+                        <field name="user_id"/>
+                        <field name="state"/>
+                        <field name="start_datetime"/>
+                        <field
+                            name="duration_hours"
+                            widget="float_time"
+                            invisible="booking_mode != 'room'"
+                        />
+                        <field
+                            name="end_datetime"
+                            readonly="booking_mode == 'room'"
+                        />
+                        <field name="calendar_id" readonly="1"/>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="booking_booking_action" model="ir.actions.act_window">
+        <field name="name">Bookings</field>
+        <field name="res_model">booking.booking</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

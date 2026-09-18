@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <menuitem id="booking_menu" name="Booking">
+        <menuitem id="booking_menu_bookings" name="Bookings" action="booking_booking_action">
+        </menuitem>
+    </menuitem>
+</odoo>
