@@ -8,9 +8,9 @@
                 <field name="name" />
                 <field name="resource_id" />
                 <field name="user_id" />
-                <field name="start_datetime" />
-                <field name="end_datetime" />
-                <field name="state" />
+                <field name="booking_date" />
+                <field name="time_slot" />
+                <field name="approval_status" />
             </list>
         </field>
     </record>
@@ -21,21 +21,16 @@
             <form string="Booking">
                 <sheet>
                     <group>
-                        <field name="booking_mode" invisible="1" />
-                        <field name="name" />
-                        <field name="resource_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                        <field name="resource_id"
+                            options="{'no_create': True, 'no_create_edit': True}" />
+                        <field name="booking_date" required="1" />
+                        <field name="time_slot" required="1" />
+                        <!-- <field name="name" readonly="not booking_rights" /> -->
+                        <!-- <field name="approval_status" readonly="not booking_rights" /> -->
+                        <field name="booking_rights" invisible="1" />
+                        <field name="start_datetime" invisible="1" />
+                        <field name="end_datetime" invisible="1" />
                         <field name="user_id" />
-                        <field name="state" />
-                        <field name="start_datetime" />
-                        <field
-                            name="duration_hours"
-                            widget="float_time"
-                            invisible="booking_mode != 'room'"
-                        />
-                        <field
-                            name="end_datetime"
-                            readonly="booking_mode == 'room'"
-                        />
                         <field name="calendar_id" readonly="1" />
                         <field name="additional_notes" />
                     </group>
