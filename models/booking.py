@@ -1,4 +1,6 @@
+from contextlib import contextmanager
 from datetime import datetime, time, timedelta, timezone
+from psycopg2.errors import ExclusionViolation
 from dateutil.relativedelta import relativedelta
 from pytz import AmbiguousTimeError, NonExistentTimeError, timezone as get_timezone
 from odoo import _, api, fields, models
@@ -10,7 +12,7 @@ class ResourceResource(models.Model):
 
     _inherit = "resource.resource"
 
-    booking_mode=fields.Selection(
+    resource_category=fields.Selection(
         [
             ('room', 'Room'),
             ('equipment', 'Equipment')
@@ -18,20 +20,12 @@ class ResourceResource(models.Model):
         required=True,
         default='room'
     )
-    max_advance_months = fields.Integer(
-        string="Maximum Advance Booking",
+    advance_booking_limit = fields.Integer(
+        string="Advance Booking Limit (Months)",
         default=3,
     )
-    latest_start_hour = fields.Float(
-        string="Latest Start Time",
-        default=20.0,
-    )
-    latest_end_hour = fields.Float(
-        string="Latest End Time",
-        default=22.0,
-    )
-    is_bookable = fields.Boolean(
-        string="Bookable",
+    is_available_for_booking = fields.Boolean(
+        string="Available for Booking",
         default=False,
     )
     booking_description = fields.Text()
@@ -40,12 +34,36 @@ class ResourceResource(models.Model):
         "resource_id",
         string="Bookings",
     )
+    approval_policy = fields.Selection(
+        [
+            ("manual", "Manual Approval"),
+            ("auto", "Automatic Approval"),
+        ],
+        string="Booking Approval",
+        required=True,
+        default="auto",
+)
 
 
 class Booking(models.Model):
     _name = "booking.booking"
     _description = "Resource Booking"
     _inherit = ["mail.thread", "mail.activity.mixin"]
+
+    # Singleton integer ranges provide resource equality with PostgreSQL's
+    # built-in GiST operators, without requiring the btree_gist extension.
+    # [start, end) permits consecutive bookings sharing an endpoint.
+    _sql_constraints = [
+        (
+            "no_active_overlap",
+            """EXCLUDE USING GIST (
+                int4range(resource_id, resource_id, '[]') WITH =,
+                tsrange(start_datetime, end_datetime, '[)') WITH &&
+            ) WHERE (approval_status IN ('pending_approval', 'confirmed'))""",
+            "This resource already has a pending or confirmed booking during "
+            "this period. Please choose another time or resource.",
+        ),
+    ]
 
     name = fields.Char(required=True, default=lambda self: f"{self.env.user.name}'s Booking",)
     additional_notes = fields.Text()
@@ -55,12 +73,12 @@ class Booking(models.Model):
         index=True,
         ondelete="cascade",
         domain=[
-            ("is_bookable", "=", True),
+            ("is_available_for_booking", "=", True),
             ("resource_type", "=", "material"),
         ],
     )
-    booking_mode = fields.Selection(
-        related="resource_id.booking_mode",
+    resource_category = fields.Selection(
+        related="resource_id.resource_category",
     )
     booking_date = fields.Date(string="Date")
     time_slot = fields.Selection(
@@ -81,7 +99,7 @@ class Booking(models.Model):
     calendar_id = fields.Many2one(
         comodel_name="resource.calendar",
         related="resource_id.calendar_id",
-        string="Working Time",
+        string="Booking Hours",
         readonly=True,
     )
     user_id = fields.Many2one(
@@ -169,8 +187,13 @@ class Booking(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        vals_list = [dict(vals) for vals in vals_list]
         for vals in vals_list:
             if not self.env.user.has_group("booking.group_booking_admin"):
+                if vals.get("user_id", self.env.uid) != self.env.uid:
+                    raise AccessError(_("You can only create bookings for yourself."))
+                # Explicitly override defaults supplied through RPC/action context.
+                vals["user_id"] = self.env.uid
                 if vals.get("approval_status", "pending_approval") != "pending_approval":
                     raise AccessError(_("Only Booking Admins can set approval status."))
                 vals["approval_status"] = "pending_approval"
@@ -181,9 +204,40 @@ class Booking(models.Model):
             vals["start_datetime"] = start
             vals["end_datetime"] = end
             vals["name"] = self._format_booking_name(resource, start, end)
-        return super().create(vals_list)
+            vals["approval_status"] = (
+                "confirmed"
+                if resource.approval_policy == "auto"
+                else "pending_approval"
+            )
+        with self._protect_booking_overlap():
+            return super().create(vals_list)
 
     def write(self, vals):
+        with self._protect_booking_overlap():
+            return self._write_booking_values(vals)
+
+    @contextmanager
+    def _protect_booking_overlap(self):
+        # Flush inside the savepoint so deferred ORM writes are checked before
+        # returning. Roll back the whole batch if any booking conflicts.
+        try:
+            with self.env.cr.savepoint():
+                yield
+        except ExclusionViolation as exc:
+            if exc.diag.constraint_name != "booking_booking_no_active_overlap":
+                raise
+            raise ValidationError(_(
+                "This resource already has a pending or confirmed booking during "
+                "this period. Please choose another time or resource."
+            )) from None
+
+    def _write_booking_values(self, vals):
+        self.check_access("write")
+        if not self.env.user.has_group("booking.group_booking_admin"):
+            if "user_id" in vals:
+                raise AccessError(_("Only Booking Admins can change Booked By."))
+            if any(booking.user_id != self.env.user for booking in self):
+                raise AccessError(_("You can only change your own bookings."))
         slot_fields = {
             "resource_id", "booking_date", "time_slot",
             "start_datetime", "end_datetime",
@@ -314,14 +368,14 @@ class Booking(models.Model):
                 raise ValidationError(_("The booking cannot start in the past."))
 
             if start > now.astimezone(tz) + relativedelta(
-                months=resource.max_advance_months
+                months=resource.advance_booking_limit
             ):
                 raise ValidationError(_("The booking is too far in advance."))
 
-            if start.hour + start.minute / 60 > resource.latest_start_hour:
+            if start.hour + start.minute / 60 > 20.0:
                 raise ValidationError(_("The booking cannot start after 8 PM."))
 
-            if end.hour + end.minute / 60 > resource.latest_end_hour:
+            if end.hour + end.minute / 60 > 21.0:
                 raise ValidationError(_("The booking cannot end after 10 PM."))
 
     @api.constrains(
@@ -339,7 +393,9 @@ class Booking(models.Model):
                 and b.approval_status in ("pending_approval", "confirmed")
             )
         ):
-            overlap = self.search_count(
+            # Check all reservations, including those hidden by ownership rules.
+            # Only a count is used; no other booker's details are returned.
+            overlap = self.sudo().search_count(
                 [
                     ("id", "!=", booking.id),
                     ("resource_id", "=", booking.resource_id.id),
@@ -357,6 +413,7 @@ class Booking(models.Model):
                     )
                 )
 
+    @api.depends_context("uid")
     def _check_booking_rights(self):
         is_admin = self.env.user.has_group("booking.group_booking_admin")
         for booking in self:

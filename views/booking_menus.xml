@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <menuitem id="booking_menu" name="My Bookings">
-        <menuitem id="booking_menu_bookings" name="Bookings" action="booking_booking_action">
-        </menuitem>
+    <menuitem id="booking_menu" name="Resource Booking &amp; Reservation">
+        <menuitem
+            id="booking_menu_bookings"
+            name="All Bookings"
+            action="booking_booking_action"
+            sequence="10" />
+        <menuitem
+            id="booking_menu_my_bookings"
+            name="My Bookings"
+            action="booking_my_bookings_action"
+            sequence="20" />
     </menuitem>
 
     <menuitem
@@ -10,6 +18,15 @@
         name="Resources"
         parent="booking_menu"
         action="booking_resource_action"
-        groups="booking.group_booking_admin"
+        sequence="30"
     />
+    <record id="booking_menu_bookings" model="ir.ui.menu">
+        <field name="groups_id"
+            eval="[(6, 0, [ref('booking.group_booking_admin')])]" />
+    </record>
+    <record id="booking_resource_menu" model="ir.ui.menu">
+        <field name="groups_id"
+            eval="[(6, 0, [ref('booking.group_booking_user'),
+                         ref('booking.group_booking_admin')])]" />
+    </record>
 </odoo>

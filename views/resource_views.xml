@@ -8,34 +8,39 @@
             ref="resource.resource_resource_form"
         />
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='resource_type']" position="attributes">
+                <attribute name="invisible">context.get('booking_resource_form', False)</attribute>
+            </xpath>
+            <xpath expr="//field[@name='time_efficiency']" position="attributes">
+                <attribute name="invisible">context.get('booking_resource_form', False)</attribute>
+            </xpath>
+            <xpath expr="//field[@name='calendar_id']" position="attributes">
+                <attribute name="string">Booking Hours</attribute>
+            </xpath>
             <xpath
-                expr="//group[@name='resource_details']"
+                expr="//group[@name='user_details']"
                 position="inside"
             >
                 <field
-                    name="is_bookable"
+                    name="is_available_for_booking"
                     groups="booking.group_booking_admin"
                 />
                 <field
-                    name="booking_mode"
-                    invisible="not is_bookable"
+                    name="resource_category"
+                    invisible="not is_available_for_booking"
                     groups="booking.group_booking_admin"
                 />
                 <field
-                    name="max_advance_months"
-                    invisible="not is_bookable"
+                    name="approval_policy"
+                    string="Approval Type"
+                    invisible="not is_available_for_booking"
                     groups="booking.group_booking_admin"
                 />
+            </xpath>
+            <xpath expr="//group[@name='resource_details']" position="inside">
                 <field
-                    name="latest_start_hour"
-                    widget="float_time"
-                    invisible="not is_bookable"
-                    groups="booking.group_booking_admin"
-                />
-                <field
-                    name="latest_end_hour"
-                    widget="float_time"
-                    invisible="not is_bookable"
+                    name="advance_booking_limit"
+                    invisible="not is_available_for_booking"
                     groups="booking.group_booking_admin"
                 />
             </xpath>
@@ -51,8 +56,9 @@
         </field>
         <field name="context">
             {
-                'default_resource_type': 'material',
-                'default_is_bookable': True
+            'booking_resource_form': True,
+            'default_resource_type': 'material',
+            'default_is_available_for_booking': True
             }
         </field>
     </record>
