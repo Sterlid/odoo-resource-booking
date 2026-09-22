@@ -17,6 +17,7 @@ Resource booking system module for Odoo
         "views/booking_views.xml",
         "views/resource_views.xml",
         "views/booking_menus.xml",
+        "data/booking_cron.xml",
     ],
     'demo': [],
     'installable': True,

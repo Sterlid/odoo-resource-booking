@@ -124,7 +124,8 @@ class Booking(models.Model):
 
     def _write_booking_values(self, vals):
         self.check_access("write")
-        if not self.env.user.has_group("booking.group_booking_admin"):
+        is_admin = self.env.su or self.env.user.has_group("booking.group_booking_admin")
+        if not is_admin:
             if "user_id" in vals:
                 raise AccessError(_("Only Booking Admins can change Booked By."))
             if any(booking.user_id != self.env.user for booking in self):
@@ -140,12 +141,10 @@ class Booking(models.Model):
                 "The resource, date and time of a confirmed booking cannot be changed. "
                 "Ask a Booking Admin to cancel it, then create a new booking."
             ))
-        if (
-            {"name", "approval_status"} & vals.keys()
-            and not self.env.user.has_group("booking.group_booking_admin")
-        ):
-            raise AccessError(_("Only Booking Admins can change the name or approval status."))
+        if "name" in vals and not is_admin:
+            raise AccessError(_("Only Booking Admins can change the booking name."))
         if "approval_status" in vals:
+            self._check_lifecycle_change(vals["approval_status"])
             transitions = {
                 "pending_approval": {"confirmed", "cancelled"},
                 "confirmed": {"cancelled", "completed"},

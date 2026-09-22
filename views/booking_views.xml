@@ -23,6 +23,9 @@
                     <button name="action_approve" type="object" string="Approve"
                         class="oe_highlight" groups="booking.group_booking_admin"
                         invisible="not id or approval_status != 'pending_approval'" />
+                    <button name="action_cancel" type="object" string="Cancel Booking"
+                        confirm="Cancel this booking and release the reserved time?"
+                        invisible="not id or not can_cancel" />
                     <field name="approval_status" widget="statusbar" readonly="1"
                         statusbar_visible="pending_approval,confirmed" />
                 </header>
@@ -35,6 +38,7 @@
                         <field name="time_slot" required="1" readonly="approval_status == 'confirmed'" />
                         <!-- <field name="name" readonly="not booking_rights" /> -->
                         <field name="booking_rights" invisible="1" />
+                        <field name="can_cancel" invisible="1" />
                         <field name="start_datetime" invisible="1" />
                         <field name="end_datetime" invisible="1" />
                         <field name="user_id" readonly="not booking_rights" />
@@ -42,6 +46,7 @@
                         <field name="additional_notes" />
                     </group>
                 </sheet>
+                <chatter />
             </form>
         </field>
     </record>
