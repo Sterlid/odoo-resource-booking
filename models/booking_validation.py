@@ -29,10 +29,7 @@ class BookingValidation(models.Model):
                 "this period. Please choose another time or resource."
             )) from None
 
-    @api.constrains(
-        "start_datetime",
-        "end_datetime"
-        )
+    @api.constrains("start_datetime", "end_datetime")
     def _check_booking_dates(self):
         for booking in self:
             if (
@@ -51,7 +48,7 @@ class BookingValidation(models.Model):
         "approval_status",
     )
     def _check_resource_availability(self):
-       # Require active bookings to fit in one available work interval.
+        # Require active bookings to fit in one available work interval.
 
         # Odoo stores Datetime values as naive UTC values.  The resource API
         # requires timezone-aware datetimes and converts them to the resource
@@ -69,6 +66,12 @@ class BookingValidation(models.Model):
         )
 
         for booking in active_bookings:
+            if (
+                not booking.resource_id.active
+                or not booking.resource_id.is_available_for_booking
+                or booking.resource_id.resource_type != "material"
+            ):
+                raise ValidationError(_("This resource is not available for booking."))
             start = fields.Datetime.to_datetime(booking.start_datetime).replace(
                 tzinfo=timezone.utc
             )
@@ -97,13 +100,14 @@ class BookingValidation(models.Model):
                         resource=booking.resource_id.display_name,
                     )
                 )
+
     @api.constrains(
-    "resource_id",
-    "start_datetime",
-    "end_datetime",
-    "booking_date",
-    "time_slot",
-    "approval_status",
+        "resource_id",
+        "start_datetime",
+        "end_datetime",
+        "booking_date",
+        "time_slot",
+        "approval_status",
     )
     def _check_booking_policy(self):
         now = fields.Datetime.now().replace(tzinfo=timezone.utc)

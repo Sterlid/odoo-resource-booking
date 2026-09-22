@@ -114,6 +114,14 @@ class Booking(models.Model):
         with self._protect_booking_overlap():
             return self._write_booking_values(vals)
 
+    def action_approve(self):
+        self.check_access("write")
+        if not self.env.user.has_group("booking.group_booking_admin"):
+            raise AccessError(_("Only Booking Admins can approve bookings."))
+        if any(booking.approval_status != "pending_approval" for booking in self):
+            raise ValidationError(_("Only pending bookings can be approved."))
+        return self.write({"approval_status": "confirmed"})
+
     def _write_booking_values(self, vals):
         self.check_access("write")
         if not self.env.user.has_group("booking.group_booking_admin"):
@@ -125,11 +133,33 @@ class Booking(models.Model):
             "resource_id", "booking_date", "time_slot",
             "start_datetime", "end_datetime",
         }
+        if slot_fields.intersection(vals) and any(
+            booking.approval_status == "confirmed" for booking in self
+        ):
+            raise ValidationError(_(
+                "The resource, date and time of a confirmed booking cannot be changed. "
+                "Ask a Booking Admin to cancel it, then create a new booking."
+            ))
         if (
             {"name", "approval_status"} & vals.keys()
             and not self.env.user.has_group("booking.group_booking_admin")
         ):
             raise AccessError(_("Only Booking Admins can change the name or approval status."))
+        if "approval_status" in vals:
+            transitions = {
+                "pending_approval": {"confirmed", "cancelled"},
+                "confirmed": {"cancelled", "completed"},
+                "cancelled": set(),
+                "completed": set(),
+            }
+            for booking in self:
+                if (
+                    vals["approval_status"] != booking.approval_status
+                    and vals["approval_status"] not in transitions[booking.approval_status]
+                ):
+                    raise ValidationError(_("This booking status transition is not allowed."))
+        # ORM constraints recheck hours, dates and conflicts even when confirmation
+        # comes from an import or RPC write instead of the Approve button.
         if not slot_fields.intersection(vals):
             return super().write(vals)
         for booking in self:

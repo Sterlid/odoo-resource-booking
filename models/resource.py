@@ -9,13 +9,13 @@ class ResourceResource(models.Model):
 
     _inherit = "resource.resource"
 
-    resource_category=fields.Selection(
+    resource_category = fields.Selection(
         [
-            ('room', 'Room'),
-            ('equipment', 'Equipment')
+            ("room", "Room"),
+            ("equipment", "Equipment"),
         ],
         required=True,
-        default='room'
+        default="room",
     )
     advance_booking_limit = fields.Integer(
         string="Advance Booking Limit (Months)",
@@ -39,4 +39,22 @@ class ResourceResource(models.Model):
         string="Booking Approval",
         required=True,
         default="auto",
-)
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.su and not self.env.user.has_group("booking.group_booking_admin"):
+            default_policy = self.default_get(["approval_policy"]).get("approval_policy")
+            if any(vals.get("approval_policy", default_policy) != "auto" for vals in vals_list):
+                raise AccessError(_("Only Booking Admins can configure booking approval."))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if (
+            "approval_policy" in vals
+            and not self.env.su
+            and not self.env.user.has_group("booking.group_booking_admin")
+            and any(resource.approval_policy != vals["approval_policy"] for resource in self)
+        ):
+            raise AccessError(_("Only Booking Admins can change booking approval."))
+        return super().write(vals)
