@@ -38,12 +38,12 @@
                         invisible="active" />
                     <group>
                         <field name="resource_id"
-                            readonly="approval_status == 'confirmed' and not booking_rights"
+                            readonly="approval_status in ('cancelled', 'completed') or (approval_status == 'confirmed' and not booking_rights)"
                             options="{'no_create': True, 'no_create_edit': True}" />
                         <field name="booking_date" required="1" widget="booking_date_min_notice"
-                            readonly="approval_status == 'confirmed' and not booking_rights" />
+                            readonly="approval_status in ('cancelled', 'completed') or (approval_status == 'confirmed' and not booking_rights)" />
                         <field name="time_slot" required="1" widget="booking_available_time_slot"
-                            readonly="approval_status == 'confirmed' and not booking_rights" />
+                            readonly="approval_status in ('cancelled', 'completed') or (approval_status == 'confirmed' and not booking_rights)" />
                         <!-- <field name="name" readonly="not booking_rights" /> -->
                         <field name="booking_rights" invisible="1" />
                         <field name="can_cancel" invisible="1" />

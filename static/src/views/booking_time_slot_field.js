@@ -2,6 +2,7 @@
 
 import { useEffect, useState, xml } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
+import { serializeDate } from "@web/core/l10n/dates";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { SelectionField, selectionField } from "@web/views/fields/selection/selection_field";
@@ -45,7 +46,7 @@ class BookingTimeSlotField extends SelectionField {
                 if (resource && date) {
                     this.orm.call("booking.booking", "get_available_time_slots", [
                         resource[0],
-                        date,
+                        serializeDate(date),
                         this.props.record.resId || false,
                     ]).then((allowed) => {
                         if (!cancelled) {
