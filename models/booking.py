@@ -137,8 +137,12 @@ class Booking(models.Model):
             "resource_id", "booking_date", "time_slot",
             "start_datetime", "end_datetime",
         }
-        if slot_fields.intersection(vals) and any(
-            booking.approval_status in ("cancelled", "completed") for booking in self
+        if slot_fields.intersection(vals) and (
+            vals.get("approval_status") in ("cancelled", "completed")
+            or any(
+                booking.approval_status in ("cancelled", "completed")
+                for booking in self
+            )
         ):
             raise ValidationError(_(
                 "The resource, date and time of a cancelled or completed booking cannot be changed."

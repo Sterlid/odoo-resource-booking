@@ -122,6 +122,28 @@ class TestBookingApproval(BookingCase):
                     booking.with_user(user).write({"time_slot": str(int(slot) + 30)})
                 self.assertEqual(booking.time_slot, original_slot)
 
+    def test_closing_write_cannot_reschedule_booking(self):
+        for user in (self.owner, self.admin):
+            with self.assertRaises(ValidationError):
+                self.booking.with_user(user).write({
+                    "time_slot": "660", "approval_status": "cancelled",
+                })
+            self.assertEqual(self.booking.approval_status, "pending_approval")
+            self.assertEqual(self.booking.time_slot, "600")
+
+        self.booking.with_user(self.admin).action_approve()
+        with patch.object(
+            fields.Datetime, "now",
+            return_value=self.booking.end_datetime + timedelta(seconds=1),
+        ):
+            with self.assertRaises(ValidationError):
+                self.booking.with_user(self.admin).write({
+                    "booking_date": self.values["booking_date"] + timedelta(days=3),
+                    "approval_status": "completed",
+                })
+        self.assertEqual(self.booking.approval_status, "confirmed")
+        self.assertEqual(self.booking.booking_date, self.values["booking_date"])
+
     def test_policy_change_does_not_approve_existing_requests(self):
         self.resource.with_user(self.admin).write({"approval_policy": "auto"})
         self.assertEqual(self.booking.approval_status, "pending_approval")
