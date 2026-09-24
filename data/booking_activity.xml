@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <record id="mail_activity_booking_approval" model="mail.activity.type">
+        <field name="name">Approve Booking</field>
+        <field name="res_model">booking.booking</field>
+        <field name="icon">fa-calendar-check-o</field>
+    </record>
+</odoo>

@@ -1,7 +1,7 @@
 """Booking date, calendar, policy and overlap validation."""
 
 from contextlib import contextmanager
-from datetime import timezone
+from datetime import datetime, time, timedelta, timezone
 
 from dateutil.relativedelta import relativedelta
 from psycopg2.errors import ExclusionViolation
@@ -13,6 +13,25 @@ from odoo.exceptions import ValidationError
 
 class BookingValidation(models.Model):
     _inherit = "booking.booking"
+
+    @api.model
+    def _minimum_booking_start(self):
+        now = fields.Datetime.now()
+        if self.env.user.has_group("booking.group_booking_admin"):
+            tz = get_timezone(self.env.user.tz or "UTC")
+            tomorrow = now.replace(tzinfo=timezone.utc).astimezone(tz).date() + timedelta(days=1)
+            return tz.localize(datetime.combine(tomorrow, time.min)).astimezone(
+                timezone.utc
+            ).replace(tzinfo=None)
+        return now + timedelta(days=7)
+
+    @api.model
+    def _check_minimum_notice(self, start):
+        # Apply when creating/rescheduling, not when approving an older request.
+        if start < self._minimum_booking_start():
+            if self.env.user.has_group("booking.group_booking_admin"):
+                raise ValidationError(_("Booking Admins can book from tomorrow onwards."))
+            raise ValidationError(_("Bookings must start at least 7 days (168 hours) in advance."))
 
     @contextmanager
     def _protect_booking_overlap(self):

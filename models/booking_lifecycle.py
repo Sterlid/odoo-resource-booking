@@ -1,4 +1,6 @@
-"""Manual cancellation and scheduled completion of bookings."""
+"""Cancellation, completion and reversible cleanup of booking history."""
+
+from datetime import timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
@@ -8,6 +10,58 @@ class BookingLifecycle(models.Model):
     _inherit = "booking.booking"
 
     can_cancel = fields.Boolean(compute="_compute_can_cancel")
+    active = fields.Boolean(default=True)
+    closed_at = fields.Datetime(readonly=True, copy=False, index=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        vals_list = [dict(vals) for vals in vals_list]
+        for vals in vals_list:
+            if vals.get("closed_at"):
+                raise AccessError(_("The closing time is recorded automatically."))
+            vals["closed_at"] = False
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if "closed_at" in vals:
+            raise AccessError(_("The closing time is recorded automatically."))
+        if vals.get("approval_status") in ("cancelled", "completed"):
+            # Repeated writes must not postpone automatic archiving.
+            vals = dict(vals)
+            with self.env.cr.savepoint():
+                for booking in self:
+                    values = dict(vals)
+                    if booking.approval_status != vals["approval_status"]:
+                        values["closed_at"] = fields.Datetime.now()
+                    super(BookingLifecycle, booking).write(values)
+            return True
+        return super().write(vals)
+
+    @api.constrains("active", "approval_status")
+    def _check_archive_status(self):
+        if any(
+            not booking.active and booking.approval_status not in ("cancelled", "completed")
+            for booking in self
+        ):
+            raise ValidationError(_("Only cancelled or completed bookings can be archived."))
+
+    @api.model
+    def _cron_archive_bookings(self):
+        cutoff = fields.Datetime.now() - timedelta(days=30)
+        domain = [
+            ("active", "=", True),
+            ("approval_status", "in", ("cancelled", "completed")),
+            "|", ("closed_at", "<=", cutoff),
+            "&", ("closed_at", "=", False),
+            "&", ("end_datetime", "<=", cutoff), ("write_date", "<=", cutoff),
+        ]
+        # Legacy records have no closing timestamp: require both the scheduled
+        # end and last modification to be old enough before archiving them.
+        bookings = self.search(domain, order="id", limit=200)
+        bookings.write({"active": False})
+        self.env["ir.cron"]._notify_progress(
+            done=len(bookings), remaining=self.search_count(domain),
+        )
 
     @api.depends("approval_status", "user_id", "start_datetime")
     @api.depends_context("uid")

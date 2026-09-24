@@ -39,7 +39,9 @@ class Booking(models.Model):
     resource_category = fields.Selection(
         related="resource_id.resource_category",
     )
-    booking_date = fields.Date(string="Date")
+    booking_date = fields.Date(
+        string="Date", help="Booking Admins can book from tomorrow; other users need at least 7 days (168 hours) of notice.",
+    )
     time_slot = fields.Selection(
         selection=[
             (
@@ -99,6 +101,7 @@ class Booking(models.Model):
             start, end = self._slot_datetimes(
                 resource, vals.get("booking_date"), vals.get("time_slot")
             )
+            self._check_minimum_notice(start)
             vals["start_datetime"] = start
             vals["end_datetime"] = end
             vals["name"] = self._format_booking_name(resource, start, end)
@@ -134,7 +137,7 @@ class Booking(models.Model):
             "resource_id", "booking_date", "time_slot",
             "start_datetime", "end_datetime",
         }
-        if slot_fields.intersection(vals) and any(
+        if not is_admin and slot_fields.intersection(vals) and any(
             booking.approval_status == "confirmed" for booking in self
         ):
             raise ValidationError(_(
@@ -172,9 +175,26 @@ class Booking(models.Model):
                     _("Choose a date and time slot before changing the resource.")
                 )
             start, end = self._slot_datetimes(resource, date, slot)
+            self._check_minimum_notice(start)
+
+            values = dict(vals)
+            schedule_changed = (
+                resource != booking.resource_id
+                or start != booking.start_datetime
+                or end != booking.end_datetime
+            )
+            if schedule_changed and values.get(
+                "approval_status", booking.approval_status
+            ) in ("pending_approval", "confirmed"):
+                # Approval applies to the reservation that was reviewed.
+                values["approval_status"] = (
+                    "pending_approval"
+                    if resource.approval_policy == "manual"
+                    else "confirmed"
+                )
 
             super(Booking, booking).write({
-                **vals,
+                **values,
                 "name": booking._format_booking_name(resource, start, end),
                 "start_datetime": start,
                 "end_datetime": end,

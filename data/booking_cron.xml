@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo noupdate="1">
+    <record id="ir_cron_pending_booking_approvals" model="ir.cron">
+        <field name="name">Bookings: Notify Admins of Pending Approvals</field>
+        <field name="model_id" ref="model_booking_booking" />
+        <field name="state">code</field>
+        <field name="code">model._cron_notify_pending_approvals()</field>
+        <field name="user_id" ref="base.user_root" />
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True" />
+    </record>
+    <record id="ir_cron_booking_reminders" model="ir.cron">
+        <field name="name">Bookings: Send Upcoming Booking Reminders</field>
+        <field name="model_id" ref="model_booking_booking" />
+        <field name="state">code</field>
+        <field name="code">model._cron_send_booking_reminders()</field>
+        <field name="user_id" ref="base.user_root" />
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True" />
+    </record>
     <record id="ir_cron_complete_bookings" model="ir.cron">
         <field name="name">Bookings: Complete Finished Bookings</field>
         <field name="model_id" ref="model_booking_booking" />
@@ -8,6 +28,16 @@
         <field name="user_id" ref="base.user_root" />
         <field name="interval_number">5</field>
         <field name="interval_type">minutes</field>
+        <field name="active" eval="True" />
+    </record>
+    <record id="ir_cron_archive_bookings" model="ir.cron">
+        <field name="name">Bookings: Archive Old Cancelled and Completed Bookings</field>
+        <field name="model_id" ref="model_booking_booking" />
+        <field name="state">code</field>
+        <field name="code">model._cron_archive_bookings()</field>
+        <field name="user_id" ref="base.user_root" />
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
         <field name="active" eval="True" />
     </record>
 </odoo>

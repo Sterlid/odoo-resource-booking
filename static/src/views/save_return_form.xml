@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="booking.SaveReturnForm" t-inherit="web.FormView" t-inherit-mode="primary">
+        <!-- Odoo 18 defines this slot twice; replace its effective (last) entry. -->
+        <xpath expr="(//t[@t-set-slot='control-panel-create-button'])[last()]" position="replace">
+            <t t-set-slot="control-panel-create-button">
+                <button t-if="!env.inDialog &amp;&amp; (model.root.isNew ? canCreate : canEdit)"
+                    type="button" class="btn btn-primary o_form_button_save"
+                    data-hotkey="s" t-on-click.stop="() => this.saveButtonClicked()">
+                    Save
+                </button>
+            </t>
+        </xpath>
+    </t>
+</templates>

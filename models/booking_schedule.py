@@ -12,6 +12,64 @@ class BookingSchedule(models.Model):
     _inherit = "booking.booking"
 
     @api.model
+    def get_available_time_slots(self, resource_id, booking_date, booking_id=False):
+        """Return slots inside the resource calendar and outside existing bookings."""
+        resource = self.env["resource.resource"].browse(resource_id).exists()
+        date = fields.Date.to_date(booking_date) if booking_date else False
+        if not resource or not date:
+            return []
+        resource.check_access("read")
+        if (
+            not resource.active
+            or not resource.is_available_for_booking
+            or resource.resource_type != "material"
+        ):
+            return []
+
+        minimum_start = self._minimum_booking_start()
+        candidates = []
+        for minute in range(0, 20 * 60 + 1, 30):
+            try:
+                start, end = self._slot_datetimes(resource, date, str(minute))
+            except ValidationError:
+                continue
+            if start < minimum_start:
+                continue
+            candidates.append((str(minute), start, end))
+        if not candidates:
+            return []
+
+        start_utc = candidates[0][1].replace(tzinfo=timezone.utc)
+        end_utc = candidates[-1][2].replace(tzinfo=timezone.utc)
+        work_intervals, _ = resource._get_valid_work_intervals(
+            start_utc, end_utc, compute_leaves=True,
+        )
+        intervals = work_intervals[resource.id]
+        domain = [
+            ("resource_id", "=", resource.id),
+            ("approval_status", "in", ("pending_approval", "confirmed")),
+            ("start_datetime", "<", candidates[-1][2]),
+            ("end_datetime", ">", candidates[0][1]),
+        ]
+        if booking_id:
+            current = self.browse(booking_id).exists()
+            current.check_access("read")
+            domain.append(("id", "!=", booking_id))
+        occupied = self.sudo().search(domain)
+        return [
+            slot for slot, start, end in candidates
+            if any(
+                interval_start <= start.replace(tzinfo=timezone.utc)
+                and interval_end >= end.replace(tzinfo=timezone.utc)
+                for interval_start, interval_end, _metadata in intervals
+            )
+            and not any(
+                other.start_datetime < end and other.end_datetime > start
+                for other in occupied
+            )
+        ]
+
+    @api.model
     def _slot_datetimes(self, resource, booking_date, time_slot):
         """Convert a one-hour local slot to Odoo's naive UTC datetimes."""
         date = fields.Date.to_date(booking_date)

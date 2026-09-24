@@ -8,9 +8,10 @@
                 <field name="name" />
                 <field name="resource_id" />
                 <field name="user_id" />
-                <field name="booking_date" />
+                <field name="booking_date" string="Booking Date" width="150px" />
                 <field name="time_slot" />
                 <field name="approval_status" />
+                <field name="checked_in_at" optional="hide" />
             </list>
         </field>
     </record>
@@ -18,8 +19,10 @@
         <field name="name">booking.booking.form</field>
         <field name="model">booking.booking</field>
         <field name="arch" type="xml">
-            <form string="Booking">
+            <form string="Booking" js_class="booking_save_return_form">
                 <header>
+                    <button name="action_check_in" type="object" string="Check In"
+                        class="oe_highlight" invisible="not id or not can_check_in" />
                     <button name="action_approve" type="object" string="Approve"
                         class="oe_highlight" groups="booking.group_booking_admin"
                         invisible="not id or approval_status != 'pending_approval'" />
@@ -30,23 +33,32 @@
                         statusbar_visible="pending_approval,confirmed" />
                 </header>
                 <sheet>
+                    <field name="active" invisible="1" />
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                        invisible="active" />
                     <group>
                         <field name="resource_id"
-                            readonly="approval_status == 'confirmed'"
+                            readonly="approval_status == 'confirmed' and not booking_rights"
                             options="{'no_create': True, 'no_create_edit': True}" />
-                        <field name="booking_date" required="1" readonly="approval_status == 'confirmed'" />
-                        <field name="time_slot" required="1" readonly="approval_status == 'confirmed'" />
+                        <field name="booking_date" required="1" widget="booking_date_min_notice"
+                            readonly="approval_status == 'confirmed' and not booking_rights" />
+                        <field name="time_slot" required="1" widget="booking_available_time_slot"
+                            readonly="approval_status == 'confirmed' and not booking_rights" />
                         <!-- <field name="name" readonly="not booking_rights" /> -->
                         <field name="booking_rights" invisible="1" />
                         <field name="can_cancel" invisible="1" />
+                        <field name="can_check_in" invisible="1" />
                         <field name="start_datetime" invisible="1" />
                         <field name="end_datetime" invisible="1" />
                         <field name="user_id" readonly="not booking_rights" />
                         <field name="calendar_id" readonly="1" />
                         <field name="additional_notes" />
+                        <field name="checked_in_at" invisible="not checked_in_at" />
+                        <field name="checked_in_by" invisible="not checked_in_at" />
+                        <field name="closed_at" invisible="not closed_at" />
                     </group>
                 </sheet>
-                <chatter />
+                <chatter invisible="not id" />
             </form>
         </field>
     </record>
@@ -64,6 +76,8 @@
                 <field name="approval_status" />
                 <filter name="pending_approval" string="Pending Approval"
                     domain="[('approval_status', '=', 'pending_approval')]" />
+                <separator />
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]" />
             </search>
         </field>
     </record>
