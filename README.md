@@ -18,21 +18,4 @@ An installable Odoo 18 module for internal users to reserve rooms and equipment.
 - Notifications follow each Odoo user's **Handle in Odoo** or **Handle by Emails** preference. Email delivery requires an outgoing mail server configured in Odoo. Scheduled jobs must be running; reminders can arrive up to five minutes after entering their window. No SMS, push app, or AI feature is included. The exercise requires at least one additional-feature category; Odoo integration and scheduled automation cover two.
 - No separate calendar event is created. The resource's existing Odoo calendar supplies working hours and time off; the booking record is the source of truth.
 
-## Install and use
 
-1. Add this module's parent directory to Odoo 18's `addons_path`, then install **Resource Booking & Reservation** (`booking`) from Apps. Restart Odoo and upgrade the module after code changes.
-2. Assign internal users to **Booking User** or **Booking Admin** under Settings. Create bookable Resources with a working calendar and choose an **Approval Type**.
-3. Users book from **Resource Booking & Reservation → My Bookings**. Admins review **All Bookings → Pending Approval** or their Odoo Activities. Booking lists open by default.
-4. To receive in-app reminders, set the user's notification preference to **Handle in Odoo**. For email reminders, configure an outgoing mail server.
-
-## Tests
-
-Run the module tests against a disposable PostgreSQL database:
-
-```bash
-./odoo-bin -c /path/to/odoo.conf -d booking_test -i booking \
-  --without-demo=all --test-enable --test-tags /booking \
-  --stop-after-init --http-port=8079
-```
-
-The tests cover ownership and access, approval, calendar availability, overlap and concurrent requests, plus approval notifications and one-time owner reminders. The test database should be discarded after the run.
